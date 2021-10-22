@@ -1,14 +1,22 @@
 from PIL import ImageGrab
 import keyboard
 
+# TO-DO
+# Popravi wait function
+
 class Snake:
 
+    # 680, 367
+    # 1000, 547
+    boardX = 1000
+    boardY = 547
+    
     headIndex = (4,7)
     boardWidth = 17
     boardHeight = 15
     squareSize = 32
     squareCenterPixel = ((squareSize - 1) // 2, (squareSize - 1) // 2)
-    boardBBox = (680, 367, 680 + squareSize * boardWidth, 367 + squareSize * boardHeight)
+    boardBBox = (boardX, boardY, boardX + squareSize * boardWidth, boardY + squareSize * boardHeight)
     applePixel = (231, 71, 29)
     startingDirection = 'right'
 
