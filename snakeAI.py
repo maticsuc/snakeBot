@@ -1,5 +1,8 @@
+import collections
 from PIL import ImageGrab
 import keyboard
+
+# TO-DO
 
 class SnakeAI:
 
@@ -12,14 +15,43 @@ class SnakeAI:
     applePixel = (231, 71, 29)
     startingDirection = 'right'
 
-    checkingPixelMargin = 10
+    checkingPixelMargin = 12
     checkingPixelLeft = ((squareSize - 1) - checkingPixelMargin, (squareSize - 1) // 2)
     checkingPixelRight = (checkingPixelMargin, (squareSize - 1) // 2)
     checkingPixelUp = ((squareSize - 1) // 2, (squareSize - 1) - checkingPixelMargin)
     checkingPixelDown = ((squareSize - 1) // 2, checkingPixelMargin)
 
+    backgroundColorLight = (87, 138, 52)
+    backgroundColorDark = (74, 117, 44)
+
     def __init__(self):
         self.reset()
+
+    def findPlayingBoardOnMonitor(self):
+        maxMonitorHeight = 2000
+        startingY = 100
+        marginY = 100
+
+        indexY = indexX = None
+
+        for y in range(startingY, maxMonitorHeight, marginY):
+            stripe = ImageGrab.grab(bbox=(0, y, 2000, y + 1))
+            try:
+                indexX = list(stripe.getdata()).index(SnakeAI.backgroundColorLight)
+                break
+            except ValueError:
+                pass
+        try:
+            stripe = ImageGrab.grab(bbox=(indexX, 0, indexX + 1, 2000))
+            indexY = list(stripe.getdata()).index(SnakeAI.backgroundColorDark)
+        except:
+            return False
+        
+        self.boardX = indexX + 28
+        self.boardY = indexY + 95
+        self.boardBBox = (self.boardX, self.boardY, self.boardX + self.squareSize * self.boardWidth, self.boardY + self.squareSize * self.boardHeight)
+
+        return True
 
     def reset(self):
         x, y = SnakeAI.headIndex
@@ -34,15 +66,17 @@ class SnakeAI:
     def play_step(self, action):
         
         self.frame_iteration += 1
+        game_over = False
+        reward = 0
 
         # Move
         self.move(action)
 
         # Check if game over
-        game_over = False
-        reward = 0
-        # if game == over
-        #   reward = -10
+        if self.collision() or self.frame_iteration > 100*len(self.body):
+            game_over = True
+            reward = -10
+            return reward, game_over, self.score
 
         # Check if SnakeAI has eaten apple
         if self.head == self.apple:
@@ -62,11 +96,9 @@ class SnakeAI:
         idx = clock_wise.index(self.direction)
 
         if action == [1, 0, 0]:
-            # No change
             new_dir = clock_wise[idx]
 
         elif action == [0, 1, 0]:
-            # Right turn
             next_idx = (idx + 1) % len(clock_wise)
             new_dir = clock_wise[next_idx]
         
@@ -77,13 +109,6 @@ class SnakeAI:
         self.direction = new_dir
 
         keyboard.press_and_release(self.direction)
-
-        self.updateOnDirection()
-
-        # Update the head and body
-        pass
-
-    def updateOnDirection(self):
 
         x, y = self.head
 
@@ -98,18 +123,22 @@ class SnakeAI:
             checkingPixel = SnakeAI.checkingPixelRight
         elif self.direction == 'left':
             x -= 1     
-            checkingPixel = SnakeAI.checkingPixelLeft    
+            checkingPixel = SnakeAI.checkingPixelLeft
 
         squareX = x * SnakeAI.squareSize
         squareY = y * SnakeAI.squareSize
 
+        c = 0
         while True:
-            self.board = ImageGrab.grab(bbox=SnakeAI.boardBBox)
+            self.board = ImageGrab.grab(bbox=self.boardBBox)
             square = self.board.crop((squareX, squareY, squareX + SnakeAI.squareSize, squareY + SnakeAI.squareSize))
             centerpixel = square.getpixel(checkingPixel)
             if centerpixel[2] >= 150:
                 self.head = (x,y)
-                return
+                return True
+            elif c > 5:
+                return False
+            c += 1       
 
     def collision(self, pt=None):
         if pt is None:

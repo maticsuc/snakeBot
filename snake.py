@@ -4,29 +4,23 @@ import keyboard
 # PIL.ImageGrab.grab(bbox=None, include_layered_windows=False, all_screens=True)
 
 class Snake:
-
-    # 680, 367
-    # 1000, 547
-    boardX = 680
-    boardY = 367
     
     headIndex = (4,7)
     boardWidth = 17
     boardHeight = 15
     squareSize = 32
     squareCenterPixel = ((squareSize - 1) // 2, (squareSize - 1) // 2)
-    boardBBox = (boardX, boardY, boardX + squareSize * boardWidth, boardY + squareSize * boardHeight)
     applePixel = (231, 71, 29)
     startingDirection = 'right'
 
-    checkingPixelMargin = 10
+    checkingPixelMargin = 12
     checkingPixelLeft = ((squareSize - 1) - checkingPixelMargin, (squareSize - 1) // 2)
     checkingPixelRight = (checkingPixelMargin, (squareSize - 1) // 2)
     checkingPixelUp = ((squareSize - 1) // 2, (squareSize - 1) - checkingPixelMargin)
     checkingPixelDown = ((squareSize - 1) // 2, checkingPixelMargin)
 
-    backgroundColor = (87, 138, 52)
-    backgroundColor2 = (74, 117, 44)
+    backgroundColorLight = (87, 138, 52)
+    backgroundColorDark = (74, 117, 44)
 
     def __init__(self):
         x, y = Snake.headIndex
@@ -37,9 +31,14 @@ class Snake:
         self.eatenApple = False
 
     def startGame(self):
-        self.findPlayingBoardOnMonitor()
-        keyboard.press_and_release(Snake.startingDirection)
+        if self.findPlayingBoardOnMonitor():
+            print("Located the playing board.")
+        else:
+            print("Couldn't locate the playing board.")
+
         self.direction = Snake.startingDirection
+        keyboard.press_and_release(Snake.startingDirection)
+        print("Started the game.")
         self.findApple()
 
     def update(self, head=None, direction=None):
@@ -59,7 +58,7 @@ class Snake:
             self.update(direction=newDirection)
 
     def findApple(self):
-        self.board = ImageGrab.grab(bbox=Snake.boardBBox)
+        self.board = ImageGrab.grab(bbox=self.boardBBox)
         for x in range(Snake.boardWidth):
             for y in range(Snake.boardHeight):
                 squareX = x * Snake.squareSize
@@ -83,24 +82,30 @@ class Snake:
             self.checkNextSquare()
 
     def findPlayingBoardOnMonitor(self):
-        indexY = None
-        for y in range(100, 2000, 100):
-            neki = ImageGrab.grab(bbox=(0, y, 2000,y + 1))
+        maxMonitorHeight = 2000
+        startingY = 100
+        marginY = 100
+
+        indexY = indexX = None
+
+        for y in range(startingY, maxMonitorHeight, marginY):
+            stripe = ImageGrab.grab(bbox=(0, y, 2000, y + 1))
             try:
-                indexX = list(neki.getdata()).index(Snake.backgroundColor)
+                indexX = list(stripe.getdata()).index(Snake.backgroundColorLight)
                 break
             except ValueError:
                 pass
+        try:
+            stripe = ImageGrab.grab(bbox=(indexX, 0, indexX + 1, 2000))
+            indexY = list(stripe.getdata()).index(Snake.backgroundColorDark)
+        except:
+            return False
         
-        neki = ImageGrab.grab(bbox=(indexX, 0, indexX + 1, 2000))
-        indexY = list(neki.getdata()).index(Snake.backgroundColor2)
-        neki = ImageGrab.grab(bbox=(indexX, indexY, indexX + 100, indexY + 100))
+        self.boardX = indexX + 28
+        self.boardY = indexY + 95
+        self.boardBBox = (self.boardX, self.boardY, self.boardX + self.squareSize * self.boardWidth, self.boardY + self.squareSize * self.boardHeight)
 
-        Snake.boardX = indexX + 28
-        Snake.boardY = indexY + 95
-
-        Snake.boardBBox = (Snake.boardX, Snake.boardY, Snake.boardX + Snake.squareSize * Snake.boardWidth, Snake.boardY + Snake.squareSize * Snake.boardHeight)
-
+        return True
 
     def checkSquare(self):
         
@@ -124,13 +129,14 @@ class Snake:
 
         c = 0
         while True:
-            self.board = ImageGrab.grab(bbox=Snake.boardBBox)
+            self.board = ImageGrab.grab(bbox=self.boardBBox)
             square = self.board.crop((squareX, squareY, squareX + Snake.squareSize, squareY + Snake.squareSize))
             centerpixel = square.getpixel(checkingPixel)
             if centerpixel[2] >= 150:
                 self.update(head=(x,y))
                 return True
             elif c > 5:
+                print("game over")
                 return False
             c += 1
     
