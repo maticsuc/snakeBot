@@ -12,6 +12,12 @@ class SnakeAI:
     applePixel = (231, 71, 29)
     startingDirection = 'right'
 
+    checkingPixelMargin = 10
+    checkingPixelLeft = ((squareSize - 1) - checkingPixelMargin, (squareSize - 1) // 2)
+    checkingPixelRight = (checkingPixelMargin, (squareSize - 1) // 2)
+    checkingPixelUp = ((squareSize - 1) // 2, (squareSize - 1) - checkingPixelMargin)
+    checkingPixelDown = ((squareSize - 1) // 2, checkingPixelMargin)
+
     def __init__(self):
         self.reset()
 
@@ -26,7 +32,9 @@ class SnakeAI:
         self.score = 0
 
     def play_step(self, action):
+        
         self.frame_iteration += 1
+
         # Move
         self.move(action)
 
@@ -81,12 +89,16 @@ class SnakeAI:
 
         if self.direction == 'down':
             y += 1
+            checkingPixel = SnakeAI.checkingPixelDown
         elif self.direction == 'up':
             y -= 1
+            checkingPixel = SnakeAI.checkingPixelUp
         elif self.direction == 'right':
             x += 1
+            checkingPixel = SnakeAI.checkingPixelRight
         elif self.direction == 'left':
             x -= 1     
+            checkingPixel = SnakeAI.checkingPixelLeft    
 
         squareX = x * SnakeAI.squareSize
         squareY = y * SnakeAI.squareSize
@@ -94,11 +106,10 @@ class SnakeAI:
         while True:
             self.board = ImageGrab.grab(bbox=SnakeAI.boardBBox)
             square = self.board.crop((squareX, squareY, squareX + SnakeAI.squareSize, squareY + SnakeAI.squareSize))
-            centerpixel = square.getpixel(SnakeAI.squareCenterPixel)
+            centerpixel = square.getpixel(checkingPixel)
             if centerpixel[2] >= 150:
                 self.head = (x,y)
                 return
-        pass
 
     def collision(self, pt=None):
         if pt is None:
